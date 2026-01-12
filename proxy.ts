@@ -1,4 +1,4 @@
-import { hc } from "@hono/hono/client";
+import type { hc } from "@hono/hono/client";
 import superjson from "superjson";
 
 export function generateProxy(client: ReturnType<typeof hc>) {
@@ -12,31 +12,19 @@ export function generateProxy(client: ReturnType<typeof hc>) {
           return data;
         }
         return Object.fromEntries(
-          Object.entries(data).map((
-            [key, value],
-          ) => [key, superjson.stringify(value)]),
+          Object.entries(data).map(([key, value]) => [key, superjson.stringify(value)])
         );
       }
 
-      switch (key) {
-        case "query":
-          return (...args: unknown[]) => {
-            const [data, options] = args;
-            return (target as unknown as { $get: CallableFunction }).$get(
-              { query: serialize(data) },
-              options,
-            );
-          };
-        case "mutate":
-          return (...args: unknown[]) => {
-            const [data, options] = args;
-            return (target as unknown as { $post: CallableFunction }).$post(
-              { json: serialize(data) },
-              options,
-            );
-          };
-      }
-      return generateProxy(client[key]);
+      const fn = (...args: unknown[]) => {
+        const [data, options] = args;
+        return (target[key] as unknown as { $post: CallableFunction }).$post(
+          { json: serialize(data) },
+          options
+        );
+      };
+      Object.assign(fn, generateProxy(client[key]));
+      return fn;
     },
   });
 }
