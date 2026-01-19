@@ -21,9 +21,11 @@ const api = router({
     return { ...user, username: input.username };
   }),
   listUsers: rpc.execute(() => {
-    return Array.from(
-      users.keys().map((username) => ({ username, emoji: users.get(username)?.emoji }))
-    );
+    const returnedUsers: { username: string; emoji: string }[] = [];
+    for (const [username, user] of users) {
+      returnedUsers.push({ username, emoji: user.emoji });
+    }
+    return returnedUsers;
   }),
 });
 
