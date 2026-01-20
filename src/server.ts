@@ -1,5 +1,5 @@
-import { Hono } from "@hono/hono";
 import { type Type, type } from "arktype";
+import { Hono } from "hono";
 import { parse } from "superjson";
 
 export function router<T extends Record<string, CallableFunction>>(

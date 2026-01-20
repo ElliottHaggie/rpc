@@ -1,6 +1,6 @@
-import { hc } from "@hono/hono/client";
-import { HTTPException } from "@hono/hono/http-exception";
-import type { ContentfulStatusCode } from "@hono/hono/utils/http-status";
+import { hc } from "hono/client";
+import { HTTPException } from "hono/http-exception";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { generateProxy } from "./proxy.ts";
 
 export function client<T extends Record<string, CallableFunction>>(baseUrl = "") {

@@ -1,4 +1,4 @@
-import type { hc } from "@hono/hono/client";
+import type { hc } from "hono/client";
 import { stringify } from "superjson";
 
 export function generateProxy(client: ReturnType<typeof hc>) {

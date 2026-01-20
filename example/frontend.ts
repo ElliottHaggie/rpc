@@ -1,7 +1,7 @@
-import { client } from "../index.ts";
+import { client } from "../src";
 import type { Routes } from "./backend.ts";
 
-export const myClient = client<Routes>("http://0.0.0.0:8000");
+const myClient = client<Routes>("http://0.0.0.0:3000");
 
 try {
   await myClient.createUser({
