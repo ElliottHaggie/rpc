@@ -1,7 +1,6 @@
 {
   "dependencies": {
     "arktype": "^2.1.29",
-    "hono": "^4.11.3",
     "superjson": "^2.2.6"
   }
 }

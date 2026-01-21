@@ -1,25 +1,30 @@
-import { hc } from "hono/client";
-import { HTTPException } from "hono/http-exception";
-import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { generateProxy } from "./proxy.ts";
+import { parse, stringify } from "superjson";
 
-export function client<T extends Record<string, CallableFunction>>(baseUrl = "") {
-  const client = hc(baseUrl, {
-    async fetch(input: RequestInfo | URL, requestInit?: RequestInit) {
-      const inputPath = input.toString().replace(baseUrl, "");
-      const targetUrl = baseUrl + inputPath;
-      const res = await fetch(targetUrl, {
-        ...requestInit,
-      });
-      if (!res.ok) {
-        throw new HTTPException(res.status as ContentfulStatusCode, {
-          message: await res.text(),
-        });
-      }
-      return res.json();
+export function client<T extends Record<string, CallableFunction>>(baseUrl: string) {
+  if (baseUrl.endsWith("/")) baseUrl = baseUrl.slice(1);
+  return generateProxy(baseUrl) as Readonly<T>;
+}
+
+function generateProxy(baseUrl: string, path: string = "") {
+  return new Proxy(
+    {},
+    {
+      get(_target, key) {
+        if (typeof key !== "string") return void 0;
+        const newPath = `${path}/${key}`;
+        const fn = async (data: unknown[]) => {
+          const res = await fetch(`${baseUrl}${newPath}`, {
+            method: "POST",
+            body: stringify(data),
+          });
+          const parsed = parse(await res.text());
+          if (!res.ok) throw parsed;
+          return parsed;
+        };
+
+        Object.assign(fn, generateProxy(baseUrl, newPath));
+        return fn;
+      },
     },
-  });
-  return generateProxy(client) as unknown as {
-    [K in keyof T]: T[K];
-  };
+  );
 }

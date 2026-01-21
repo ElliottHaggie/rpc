@@ -1,8 +1,8 @@
 import { type } from "arktype";
+import { serve } from "bun";
 import { router, rpc } from "../src";
 
 const users = new Map<string, { password: string; emoji: string }>();
-
 const authorizedUserInput = type({ username: "string", password: "string" });
 
 const api = router({
@@ -38,4 +38,4 @@ function getEmoji() {
 }
 
 export type Routes = typeof api.routes;
-export default api.app;
+export default serve({ routes: { "/api/:key": { POST: (c) => api.call(c.params.key, c) } } });

@@ -1,7 +1,7 @@
 import { client } from "../src";
 import type { Routes } from "./backend.ts";
 
-const myClient = client<Routes>("http://0.0.0.0:3000");
+const myClient = client<Routes>("http://0.0.0.0:3000/api");
 
 try {
   await myClient.createUser({
