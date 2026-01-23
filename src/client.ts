@@ -21,7 +21,6 @@ function generateProxy(baseUrl: string, path: string = "") {
           if (!res.ok) throw parsed;
           return parsed;
         };
-
         Object.assign(fn, generateProxy(baseUrl, newPath));
         return fn;
       },

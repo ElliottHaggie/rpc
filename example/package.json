@@ -1,0 +1,29 @@
+{
+	"name": "rpc-example",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "bun --hot src/index.ts",
+		"build": "bun build ./src/index.html --outdir=dist --sourcemap --target=browser --minify --define:process.env.NODE_ENV='\"production\"' --env='BUN_PUBLIC_*'",
+		"start": "NODE_ENV=production bun src/index.ts"
+	},
+	"dependencies": {
+		"@tanstack/react-query": "^5.90.19",
+		"dotenv": "^17.2.3",
+		"drizzle-orm": "^0.45.1",
+		"jotai": "^2.16.2",
+		"nanoid": "^5.1.6",
+		"pg": "^8.17.2",
+		"react": "^19",
+		"react-dom": "^19"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@types/pg": "^8.16.0",
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"drizzle-kit": "^0.31.8",
+		"typescript": "^5.9.3"
+	}
+}
