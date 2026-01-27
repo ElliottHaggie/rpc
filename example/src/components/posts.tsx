@@ -1,0 +1,59 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAtomValue } from "jotai";
+import { Fragment } from "react";
+import client from "@/client";
+import { $token } from "@/state";
+import { useRequireAuth } from "./auth";
+
+export function Posts() {
+  const query = useQuery({ queryKey: ["posts"], queryFn: () => client.listPosts() });
+  return (
+    <>
+      {query.isPending && "Fetching posts"}
+      {query.data?.map((post, i) => (
+        <Fragment key={post.id}>
+          <div>
+            <b>
+              {post.author.name}・
+              {post.createdAt.toLocaleString("en-US", {
+                hour: "numeric",
+                minute: "numeric",
+              })}
+            </b>
+            <br />
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              {post.content}
+              <LikeButton postId={post.id} />
+            </div>
+          </div>
+          {i < query.data.length - 1 && <hr />}
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
+function LikeButton({ postId }: Readonly<{ postId: string }>) {
+  const queryClient = useQueryClient();
+  const requireAuth = useRequireAuth();
+  const token = useAtomValue($token);
+  const { data: likes } = useQuery({
+    queryKey: ["likes", postId],
+    queryFn: () => client.listLikes({ token, postId }),
+    initialData: { count: 0, liked: false },
+  });
+  const likeMutation = useMutation({
+    mutationFn: client.likePost,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["likes", postId] }),
+  });
+  return (
+    <button
+      type="button"
+      onClick={() => requireAuth((token) => likeMutation.mutateAsync({ token, postId }))}
+      disabled={!likes || likeMutation.isPending}
+    >
+      <span style={{ filter: `grayscale(${1 - Number(likes?.liked)})` }}>❤️</span>{" "}
+      {likes?.count ?? 0}
+    </button>
+  );
+}

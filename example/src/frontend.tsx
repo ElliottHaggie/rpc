@@ -9,17 +9,17 @@ if (!elem) throw new Error("No root");
 const queryClient = new QueryClient();
 
 const app = (
-	<StrictMode>
-		<QueryClientProvider client={queryClient}>
-			<App />
-		</QueryClientProvider>
-	</StrictMode>
+  <StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
+  </StrictMode>
 );
 
 if (import.meta.hot) {
-	// biome-ignore lint/suspicious/noAssignInExpressions: With hot module reloading, `import.meta.hot.data` is persisted.
-	const root = (import.meta.hot.data.root ??= createRoot(elem));
-	root.render(app);
+  // biome-ignore lint/suspicious/noAssignInExpressions: With hot module reloading, `import.meta.hot.data` is persisted.
+  const root = (import.meta.hot.data.root ??= createRoot(elem));
+  root.render(app);
 } else {
-	createRoot(elem).render(app);
+  createRoot(elem).render(app);
 }
