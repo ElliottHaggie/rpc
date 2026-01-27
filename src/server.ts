@@ -41,9 +41,7 @@ export const router = <T extends API>(routes: T) => ({
 function createRPC<C = undefined>(middlewares: CallableFunction[] = []) {
   return {
     input: <T extends Type>(schema: T) => ({ execute: createHandler<T, C>(schema, middlewares) }),
-    execute: createHandler(type("undefined"), middlewares) as ReturnType<
-      typeof createHandler<Type, C>
-    >,
+    execute: createHandler<Type<unknown>, C>(type("undefined"), middlewares),
     use: <T>(middleware: (ctx: Context<C>) => T) =>
       createRPC<Awaited<T>>([...middlewares, middleware]),
   };
