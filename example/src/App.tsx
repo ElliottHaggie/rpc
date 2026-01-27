@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import client from "./client";
-import { AuthDialog, useRequireAuth } from "./components/auth";
+import { AuthDialog, SignOut, useRequireAuth } from "./components/auth";
 import { Debug } from "./components/debug";
 import { Posts } from "./components/posts";
 
@@ -11,7 +11,10 @@ export function App() {
       <div
         style={{ display: "grid", gridTemplateColumns: "1fr minmax(0, 32rem) 1fr", gap: "1rem" }}
       >
-        <div style={{ gridColumn: 2 }}>
+        <div style={{ display: "flex", height: "fit-content", justifyContent: "right" }}>
+          <SignOut />
+        </div>
+        <div>
           <CreatePost />
           <Posts />
         </div>

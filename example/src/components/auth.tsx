@@ -39,7 +39,7 @@ export function AuthDialog() {
         }}
       >
         <label htmlFor="username">Username</label>
-        <input name="username" required disabled={authMutation.isPending} />
+        <input autoComplete="username" name="username" required disabled={authMutation.isPending} />
         <label htmlFor="password">Password</label>
         <input type="password" name="password" required disabled={authMutation.isPending} />
         <div
@@ -67,6 +67,16 @@ export function AuthDialog() {
         </div>
       </form>
     </dialog>
+  );
+}
+
+export function SignOut() {
+  const [token, setToken] = useAtom($token);
+  if (!token) return null;
+  return (
+    <button type="button" onClick={() => setToken(undefined)}>
+      Sign out
+    </button>
   );
 }
 

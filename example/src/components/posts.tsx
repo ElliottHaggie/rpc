@@ -7,30 +7,25 @@ import { useRequireAuth } from "./auth";
 
 export function Posts() {
   const query = useQuery({ queryKey: ["posts"], queryFn: () => client.listPosts() });
-  return (
-    <>
-      {query.isPending && "Fetching posts"}
-      {query.data?.map((post, i) => (
-        <Fragment key={post.id}>
-          <div>
-            <b>
-              {post.author.name}・
-              {post.createdAt.toLocaleString("en-US", {
-                hour: "numeric",
-                minute: "numeric",
-              })}
-            </b>
-            <br />
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              {post.content}
-              <LikeButton postId={post.id} />
-            </div>
-          </div>
-          {i < query.data.length - 1 && <hr />}
-        </Fragment>
-      ))}
-    </>
-  );
+  return query.data?.map((post, i) => (
+    <Fragment key={post.id}>
+      <div>
+        <b>
+          {post.author.name}・
+          {post.createdAt.toLocaleString("en-US", {
+            hour: "numeric",
+            minute: "numeric",
+          })}
+        </b>
+        <br />
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          {post.content}
+          <LikeButton postId={post.id} />
+        </div>
+      </div>
+      {i < query.data.length - 1 && <hr />}
+    </Fragment>
+  ));
 }
 
 function LikeButton({ postId }: Readonly<{ postId: string }>) {
@@ -38,9 +33,9 @@ function LikeButton({ postId }: Readonly<{ postId: string }>) {
   const requireAuth = useRequireAuth();
   const token = useAtomValue($token);
   const { data: likes } = useQuery({
-    queryKey: ["likes", postId],
-    queryFn: () => client.listLikes({ token, postId }),
-    initialData: { count: 0, liked: false },
+    queryKey: ["likes", postId, token],
+    queryFn: () => client.listLikes({ postId, token }),
+    placeholderData: (p) => p ?? { count: 0, liked: false },
   });
   const likeMutation = useMutation({
     mutationFn: client.likePost,

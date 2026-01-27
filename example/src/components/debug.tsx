@@ -43,7 +43,7 @@ export function Debug() {
           >
             <b>{c.route}</b>
             <br />
-            <TomlTree value={c.bodies} />
+            <TomlTree value={c.bodies} isRoot />
           </li>
         ))}
       </ul>
@@ -51,7 +51,7 @@ export function Debug() {
   );
 }
 
-function TomlTree({ value }: Readonly<{ value: unknown }>) {
+function TomlTree({ value, isRoot }: Readonly<{ value: unknown; isRoot?: boolean }>) {
   if (value === null || typeof value !== "object") return null;
   return (
     <>
@@ -62,16 +62,16 @@ function TomlTree({ value }: Readonly<{ value: unknown }>) {
           !(val instanceof Date) &&
           !(val instanceof Error);
         return isObject ? (
-          <details key={key}>
+          <details key={key} style={{ overflow: "scroll" }}>
             <summary>
               <i>{key}</i>
             </summary>
-            <div style={{ paddingLeft: "1rem", overflow: "scroll" }}>
+            <div style={{ paddingLeft: "1rem" }}>
               <TomlTree value={val} />
             </div>
           </details>
         ) : (
-          <div key={key} style={{ textWrap: "nowrap" }}>
+          <div key={key} style={{ textWrap: "nowrap", overflow: isRoot ? "scroll" : undefined }}>
             <i>{key}</i> = {String(val)}
           </div>
         );
