@@ -1,6 +1,5 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import client from "./client";
-import { AuthDialog, SignOut, useRequireAuth } from "./components/auth";
+import { AuthDialog, SignOut } from "./components/auth";
+import { CreatePost } from "./components/create-post";
 import { Debug } from "./components/debug";
 import { Posts } from "./components/posts";
 
@@ -21,41 +20,6 @@ export function App() {
         <Debug />
       </div>
     </>
-  );
-}
-
-function CreatePost() {
-  const queryClient = useQueryClient();
-  const requireAuth = useRequireAuth();
-  const postMutation = useMutation({
-    mutationFn: client.createPost,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["posts"] }),
-  });
-  return (
-    <form
-      action={(formData) => {
-        const content = formData.get("content");
-        if (typeof content !== "string") return;
-        requireAuth((token) => postMutation.mutateAsync({ token, content }));
-      }}
-      style={{ display: "flex", gap: "0.5rem" }}
-    >
-      <input
-        type="text"
-        name="content"
-        placeholder="Enter a message"
-        style={{ flexGrow: 1 }}
-        disabled={postMutation.isPending}
-        required
-      />
-      <button
-        type="submit"
-        style={{ width: "fit-content", marginLeft: "auto", gridColumn: "2" }}
-        disabled={postMutation.isPending}
-      >
-        Post
-      </button>
-    </form>
   );
 }
 

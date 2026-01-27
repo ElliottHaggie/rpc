@@ -2,29 +2,36 @@ import { useMutation } from "@tanstack/react-query";
 import { getDefaultStore, useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useRef } from "react";
 import client from "@/client";
-import { $authDialog, $token } from "@/state";
+import { $authDialogCallbacks, $token } from "@/state";
 
 export function AuthDialog() {
   const setToken = useSetAtom($token);
-  const [dialog, setDialog] = useAtom($authDialog);
+  const [callbacks, setCallbacks] = useAtom($authDialogCallbacks);
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    if (dialog.open && !ref.current?.open) ref.current?.showModal();
-    if (!dialog.open && ref.current?.open) ref.current?.close();
-  }, [dialog.open]);
+    if (callbacks.length && !ref.current?.open) ref.current?.showModal();
+  }, [callbacks]);
 
   const authMutation = useMutation({
-    async mutationFn(creds: { username: string; password: string }) {
-      const auth = await client.authorize(creds);
-      setToken(auth.token);
-      getDefaultStore().get($authDialog).onSuccess?.(auth.token);
-      setDialog({ open: false });
+    mutationFn: client.authorize,
+    onSuccess({ token }) {
+      for (const cb of getDefaultStore().get($authDialogCallbacks)) {
+        cb(token);
+      }
+      setToken(token);
+      close();
     },
   });
 
+  function close() {
+    setCallbacks([]);
+    ref.current?.close();
+    authMutation.reset();
+  }
+
   return (
-    <dialog ref={ref}>
+    <dialog ref={ref} onClose={close} closedby="any">
       <form
         action={(formData) => {
           const username = formData.get("username");
@@ -82,9 +89,9 @@ export function SignOut() {
 
 export function useRequireAuth() {
   const token = useAtomValue($token);
-  const setDialog = useSetAtom($authDialog);
+  const setCallbacks = useSetAtom($authDialogCallbacks);
   return (action: (token: string) => unknown) => {
     if (token) action(token);
-    else setDialog({ open: true, onSuccess: action });
+    else setCallbacks((p) => [...p, action]);
   };
 }

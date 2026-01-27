@@ -20,9 +20,7 @@ function atomWithLocalStorage<T>(key: string, initialValue: T) {
 
 export const $token = atomWithLocalStorage<string | undefined>("token", undefined);
 
-export const $authDialog = atom<{ open: boolean; onSuccess?: (token: string) => unknown }>({
-  open: false,
-});
+export const $authDialogCallbacks = atom<((token: string) => unknown)[]>([]);
 
 export const $calls = atom<
   {

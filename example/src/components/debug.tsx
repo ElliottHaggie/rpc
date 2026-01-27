@@ -13,10 +13,10 @@ export function Debug() {
       </summary>
       <div style={{ display: "flex", gap: "0.5rem", margin: "0.5rem", marginLeft: "1rem" }}>
         <button type="button" onClick={() => client.test.pass()}>
-          Successful req
+          Successful
         </button>
         <button type="button" onClick={() => client.test.never()}>
-          Infinite req
+          Infinite
         </button>
         <button
           type="button"
@@ -26,7 +26,17 @@ export function Debug() {
             } catch {}
           }}
         >
-          Failing req
+          Failing
+        </button>
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              await client.authorized.test();
+            } catch {}
+          }}
+        >
+          Authorized
         </button>
       </div>
       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>

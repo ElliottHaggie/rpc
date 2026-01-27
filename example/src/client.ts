@@ -2,15 +2,16 @@ import { getDefaultStore } from "jotai";
 import { parse } from "superjson";
 import { client } from "../../src";
 import type { Routes } from "./";
-import { $calls } from "./state";
+import { $calls, $token } from "./state";
 
 export default client<Routes>("/api", {
   // Append a new call record to the calls state when a request is made
-  async onRequest(r) {
-    const id = r.headers.get("reqId");
+  async beforeRequest(r) {
+    const id = r.headers.get("req-id");
     if (!id) return;
-    const body = parse(await r.text());
-    getDefaultStore().set($calls, (p) => [
+    const body = parse(await r.clone().text());
+    const store = getDefaultStore();
+    store.set($calls, (p) => [
       {
         id,
         route: new URL(r.url).pathname.split("/").slice(2).join(".") ?? "unknown",
@@ -19,10 +20,12 @@ export default client<Routes>("/api", {
       },
       ...p,
     ]);
+    const token = store.get($token);
+    if (token) r.headers.set("token", token);
   },
   // Update the call record when the res comes back
   async onResponse(r) {
-    const id = r.headers.get("reqId");
+    const id = r.headers.get("req-id");
     if (!id) return;
     const body = parse(await r.text());
     getDefaultStore().set($calls, (p) => {

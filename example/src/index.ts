@@ -3,14 +3,12 @@ import { hash, serve } from "bun";
 import { and, count, desc, eq } from "drizzle-orm";
 import { router, rpc } from "../../src";
 import { db } from "./db";
-import { postLikesTable, postsTable, usersTable } from "./db/schema";
+import { postLikesTable, postsTable, type SelectUser, usersTable } from "./db/schema";
 import index from "./index.html";
-
-const Authed = type({ token: "string" });
 
 const getSelf = (token: string) =>
   db
-    .select()
+    .select({ id: usersTable.id })
     .from(usersTable)
     .where(eq(usersTable.token, token))
     .limit(1)
@@ -56,56 +54,60 @@ const api = router({
       .limit(10)
       .execute(),
   ),
-  createPost: rpc.input(Authed.and({ content: "string" })).execute(async ({ token, content }) => {
-    const user = await getSelf(token);
-    if (!user) throw new Error("Unknown user");
-    return db.insert(postsTable).values({ content, userId: user.id });
-  }),
-  likePost: rpc.input(Authed.and({ postId: "string" })).execute(async ({ token, postId }) => {
-    const user = await getSelf(token);
-    if (!user) throw new Error("Unknown user");
-    const result = await db
-      .insert(postLikesTable)
-      .values({ postId, userId: user.id })
-      .onConflictDoNothing()
-      .returning({ postId: postLikesTable.postId });
-    if (result.length === 0) {
-      await db
-        .delete(postLikesTable)
-        .where(and(eq(postLikesTable.postId, postId), eq(postLikesTable.userId, user.id)));
-
-      return { liked: false };
-    }
-  }),
-  listLikes: rpc
-    .input(type({ postId: "string", token: "string|undefined" }))
-    .execute(async ({ postId, token }) => {
-      const [{ value: likes } = {}] = await db
-        .select({ value: count() })
-        .from(postLikesTable)
-        .where(eq(postLikesTable.postId, postId));
-      let liked = false;
-      if (token) {
-        const user = await getSelf(token);
-        if (user) {
-          const [row] = await db
-            .select({ exists: count() })
-            .from(postLikesTable)
-            .where(and(eq(postLikesTable.postId, postId), eq(postLikesTable.userId, user.id)))
-            .limit(1);
-          liked = !!row && row.exists > 0;
-        }
+  authorized: {
+    async $({ req }) {
+      const token = req.headers.get("token");
+      if (!token) throw new Error("Missing token header");
+      const user = await getSelf(token);
+      if (!user) throw new Error("Unknown user");
+      return user;
+    },
+    test: rpc.execute((_, { $ }) => $<SelectUser>()),
+    createPost: rpc
+      .input(type("string"))
+      .execute(async (content, { $ }) =>
+        db.insert(postsTable).values({ content, userId: $<SelectUser>().id }),
+      ),
+    likePost: rpc.input(type("string")).execute(async (postId, { $ }) => {
+      const user = $<SelectUser>();
+      const result = await db
+        .insert(postLikesTable)
+        .values({ postId, userId: user.id })
+        .onConflictDoNothing()
+        .returning({ postId: postLikesTable.postId });
+      if (result.length === 0) {
+        await db
+          .delete(postLikesTable)
+          .where(and(eq(postLikesTable.postId, postId), eq(postLikesTable.userId, user.id)));
       }
-      return { count: likes ?? 0, liked };
     }),
+  },
+  listLikes: rpc.input(type("string")).execute(async (postId, { req }) => {
+    const [{ value: likes } = {}] = await db
+      .select({ value: count() })
+      .from(postLikesTable)
+      .where(eq(postLikesTable.postId, postId));
+    let liked = false;
+    const token = req.headers.get("token");
+    if (token) {
+      const user = await getSelf(token);
+      if (user) {
+        const [row] = await db
+          .select({ exists: count() })
+          .from(postLikesTable)
+          .where(and(eq(postLikesTable.postId, postId), eq(postLikesTable.userId, user.id)))
+          .limit(1);
+        liked = !!row && row.exists > 0;
+      }
+    }
+    return { count: likes ?? 0, liked };
+  }),
 });
 
 const server = serve({
   routes: {
     "/": index,
-    "/api/*": {
-      POST: (c) => api.call(new URL(c.url).pathname.split("/").slice(2), c),
-    },
+    "/api/*": { POST: (c) => api.call(new URL(c.url).pathname.split("/").slice(2), c) },
   },
   development: process.env.NODE_ENV !== "production" && { hmr: true, console: true },
 });

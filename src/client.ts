@@ -3,7 +3,8 @@ import { parse, stringify } from "superjson";
 import type { API } from "./server";
 
 interface Callbacks {
-  onRequest?: (request: Request) => unknown;
+  /** Runs before fetching, you may mutate {@link request} */
+  beforeRequest?: (request: Request) => unknown;
   onResponse?: (request: Response) => unknown;
 }
 
@@ -24,10 +25,10 @@ function generateProxy(target: object, path: string, callbacks?: Callbacks) {
       async function fn(data: unknown[]) {
         const req = new Request(newPath, {
           method: "POST",
-          headers: { reqId: randomUUID() },
+          headers: { "req-id": randomUUID() },
           body: stringify(data),
         });
-        callbacks?.onRequest?.(req.clone());
+        await callbacks?.beforeRequest?.(req);
         const res = await fetch(req);
         callbacks?.onResponse?.(res.clone());
         const parsed = parse(await res.text());

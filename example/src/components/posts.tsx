@@ -6,8 +6,12 @@ import { $token } from "@/state";
 import { useRequireAuth } from "./auth";
 
 export function Posts() {
-  const query = useQuery({ queryKey: ["posts"], queryFn: () => client.listPosts() });
-  return query.data?.map((post, i) => (
+  const { data: posts } = useQuery({
+    queryKey: ["posts"],
+    queryFn: () => client.listPosts(),
+    placeholderData: (p) => p,
+  });
+  return posts?.map((post, i) => (
     <Fragment key={post.id}>
       <div>
         <b>
@@ -23,7 +27,7 @@ export function Posts() {
           <LikeButton postId={post.id} />
         </div>
       </div>
-      {i < query.data.length - 1 && <hr />}
+      {i < posts.length - 1 && <hr />}
     </Fragment>
   ));
 }
@@ -34,17 +38,17 @@ function LikeButton({ postId }: Readonly<{ postId: string }>) {
   const token = useAtomValue($token);
   const { data: likes } = useQuery({
     queryKey: ["likes", postId, token],
-    queryFn: () => client.listLikes({ postId, token }),
+    queryFn: () => client.listLikes(postId),
     placeholderData: (p) => p ?? { count: 0, liked: false },
   });
   const likeMutation = useMutation({
-    mutationFn: client.likePost,
+    mutationFn: client.authorized.likePost,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["likes", postId] }),
   });
   return (
     <button
       type="button"
-      onClick={() => requireAuth((token) => likeMutation.mutateAsync({ token, postId }))}
+      onClick={() => requireAuth(() => likeMutation.mutateAsync(postId))}
       disabled={!likes || likeMutation.isPending}
     >
       <span style={{ filter: `grayscale(${1 - Number(likes?.liked)})` }}>❤️</span>{" "}
