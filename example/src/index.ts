@@ -3,7 +3,7 @@ import { hash, serve } from "bun";
 import { and, count, desc, eq } from "drizzle-orm";
 import { router, rpc } from "../../src";
 import { db } from "./db";
-import { postLikesTable, postsTable, type SelectUser, usersTable } from "./db/schema";
+import { postLikesTable, postsTable, usersTable } from "./db/schema";
 import index from "./index.html";
 
 const getSelf = (token: string) =>
@@ -13,6 +13,14 @@ const getSelf = (token: string) =>
     .where(eq(usersTable.token, token))
     .limit(1)
     .then((r) => r[0]);
+
+const authenticated = rpc.use(async ({ req }) => {
+  const token = req.headers.get("token");
+  if (!token) throw new Error("Missing token header");
+  const user = await getSelf(token);
+  if (!user) throw new Error("Unknown user");
+  return user;
+});
 
 const api = router({
   test: {
@@ -55,21 +63,11 @@ const api = router({
       .execute(),
   ),
   authorized: {
-    async $({ req }) {
-      const token = req.headers.get("token");
-      if (!token) throw new Error("Missing token header");
-      const user = await getSelf(token);
-      if (!user) throw new Error("Unknown user");
-      return user;
-    },
-    test: rpc.execute((_, { $ }) => $<SelectUser>()),
-    createPost: rpc
+    test: authenticated.execute((_, { $ }) => $),
+    createPost: authenticated
       .input(type("string"))
-      .execute(async (content, { $ }) =>
-        db.insert(postsTable).values({ content, userId: $<SelectUser>().id }),
-      ),
-    likePost: rpc.input(type("string")).execute(async (postId, { $ }) => {
-      const user = $<SelectUser>();
+      .execute(async (content, { $ }) => db.insert(postsTable).values({ content, userId: $.id })),
+    likePost: authenticated.input(type("string")).execute(async (postId, { $: user }) => {
       const result = await db
         .insert(postLikesTable)
         .values({ postId, userId: user.id })

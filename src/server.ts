@@ -1,16 +1,15 @@
 import { type Type, type } from "arktype";
 import { parse, stringify } from "superjson";
 
-interface Context {
+interface Context<T> {
   req: Request;
   /** The result of the last middleware */
-  $: <T>() => Readonly<T>;
+  $: T;
 }
 
-export type API = { [key: string]: CallableFunction | API } & {
-  /** A middleware function for this level that will be run for any neighbours or children */
-  $?: (ctx: Context) => unknown;
-};
+export interface API {
+  [key: string]: CallableFunction | API;
+}
 
 export const router = <T extends API>(routes: T) => ({
   async call(key: string | string[], req: Request) {
@@ -18,16 +17,12 @@ export const router = <T extends API>(routes: T) => ({
       // Walk through nested routes
       let current: CallableFunction | API = routes;
 
-      let prev$: unknown;
-
-      const context = { req, $: () => prev$ } as Context;
+      const context = { req, $: undefined } as Context<unknown>;
 
       for (const element of Array.isArray(key) ? key : [key]) {
         if (typeof current !== "object" || !element) {
           throw new TypeError(`Route "${key}" is not accessible`);
         }
-        // Middleware
-        if (current.$) prev$ = await current.$?.(context);
         if (!current[element]) throw new Error(`Route "${key}" not found`);
         current = current[element];
       }
@@ -43,17 +38,33 @@ export const router = <T extends API>(routes: T) => ({
   routes,
 });
 
-export const rpc = {
-  input: <T extends Type>(schema: T) => ({ execute: createHandler(schema) }),
-  execute: createHandler(type("undefined")),
-};
+function createRPC<C = undefined>(middlewares: CallableFunction[] = []) {
+  return {
+    input: <T extends Type>(schema: T) => ({ execute: createHandler<T, C>(schema, middlewares) }),
+    execute: createHandler(type("undefined"), middlewares) as ReturnType<
+      typeof createHandler<Type, C>
+    >,
+    use: <T>(middleware: (ctx: Context<C>) => T) =>
+      createRPC<Awaited<T>>([...middlewares, middleware]),
+  };
+}
+
+export const rpc = createRPC();
 
 // Fancy type wrapping so that the returned types look the same as the execute/input data
-function createHandler<T extends Type>(schema: T) {
+function createHandler<T extends Type, C>(schema: T, middlewares: CallableFunction[]) {
   type Schema = typeof schema.infer;
-  return <R>(execute: (input: Schema, ctx: Context) => R) =>
+  return <R>(execute: (input: Schema, ctx: Context<C>) => R) =>
     // Verify that incoming data is valid before calling the function
-    ((i: Schema, c: Context) => execute(schema.assert(i), c)) as unknown as (
+    (async (i: Schema, c: Context<C>) =>
+      execute(
+        schema.assert(i),
+        await middlewares.reduce(async (pPromise, m) => {
+          const p = await pPromise;
+          p.$ = await m(p);
+          return p;
+        }, Promise.resolve(c)),
+      )) as unknown as (
       ...i: Schema extends undefined ? [] : [input: Schema]
     ) => Promise<Awaited<R>>;
 }

@@ -34,5 +34,3 @@ export const postLikesTable = pgTable(
   },
   (table) => [primaryKey({ columns: [table.postId, table.userId] })],
 );
-
-export type SelectUser = typeof usersTable.$inferSelect;
